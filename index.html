@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>فواتيري · My Receipts</title>
+<meta name="description" content="صوّر فاتورتك واحفظ منتجاتها وقارن الأسعار" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#4A3F8C" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="icon" href="icons/icon-192.png" />
+<style>
+  :root{
+    --bg: #F6F5FA;
+    --surface: #FFFFFF;
+    --surface-2: #EFEDF8;
+    --primary: #4A3F8C;
+    --primary-dark: #362C6E;
+    --accent: #F2B84B;
+    --accent-dark: #D99E2E;
+    --text: #201C34;
+    --text-soft: #615A7C;
+    --text-muted: #9891AC;
+    --border: #E3E0F0;
+    --danger: #E15B5B;
+    --radius: 14px;
+    --shadow: 0 8px 20px rgba(74,63,140,0.12);
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: linear-gradient(180deg, #F6F5FA 0%, #EFEDF8 100%);
+    color: var(--text);
+    min-height:100vh;
+    padding-bottom: 2rem;
+  }
+  .topbar{
+    background: linear-gradient(135deg, var(--primary) 0%, #5C4FA8 100%);
+    color: white;
+    padding: 1.4rem 1.2rem 1.6rem;
+    border-radius: 0 0 24px 24px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .topbar::after{
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(circle at 90% -10%, rgba(255,255,255,0.14), transparent 60%);
+  }
+  .topbar-inner{ display:flex; align-items:center; justify-content:space-between; position:relative; z-index:1; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-icon{ width:38px;height:38px;border-radius:10px; background: rgba(255,255,255,0.16); display:flex;align-items:center;justify-content:center; font-size:19px; }
+  .brand h1{ font-size:18px; margin:0; font-weight:600; }
+  .lang-toggle{ background: rgba(255,255,255,0.16); border: none; color: white; padding: 7px 14px; border-radius: 999px; font-size: 13px; cursor:pointer; font-weight:600; }
+  .container{ max-width: 480px; margin: 0 auto; padding: 0 1.1rem; }
+
+  .tabs{ display:flex; gap:6px; margin-top:-1.4rem; position:relative; z-index:2; background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:5px; }
+  .tab-btn{ flex:1; text-align:center; padding:9px; border-radius:10px; border:none; background:transparent; color:var(--text-soft); font-size:13px; font-weight:700; cursor:pointer; }
+  .tab-btn.active{ background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color:white; }
+
+  .card{ background: var(--surface); border-radius: var(--radius); padding: 1.1rem; box-shadow: var(--shadow); margin-top: 1rem; }
+  label{ font-size:12px; color:var(--text-soft); font-weight:600; margin-bottom:4px; display:block; }
+  input[type=text], input[type=number], input[type=date]{
+    width:100%; padding: 11px 13px; border-radius: 10px; border: 1.5px solid var(--border);
+    background: #FBFAFE; font-size: 14px; color: var(--text); outline:none;
+  }
+  input:focus{ border-color: var(--primary); }
+  select{ width:100%; padding: 11px 13px; border-radius: 10px; border: 1.5px solid var(--border); background: #FBFAFE; font-size: 14px; color: var(--text); }
+  .row{ display:flex; gap:8px; margin-bottom: 12px; }
+  .row > div{ flex:1; min-width:0; }
+  .btn{ border:none; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight:600; cursor:pointer; display:flex;align-items:center;justify-content:center; gap:6px; white-space:nowrap; }
+  .btn-ghost{ background: var(--surface-2); color: var(--primary-dark); }
+  .btn-primary{ width:100%; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; box-shadow: 0 6px 16px rgba(242,184,75,0.35); padding: 13px; font-size:15px; }
+  .btn-primary:active{ transform: scale(0.99); }
+  .btn-secondary{ width:100%; background: var(--surface-2); color: var(--primary-dark); padding: 12px; font-size:14px; }
+
+  .scan-zone{
+    border: 2px dashed var(--border); border-radius: 14px; padding: 1.6rem 1rem; text-align:center;
+    color: var(--text-soft); font-size: 13px; cursor:pointer; background: #FBFAFE;
+  }
+  .scan-zone .icon{ font-size:32px; margin-bottom:8px; display:block; }
+  .preview-img{ width:100%; border-radius: 10px; margin-top: 10px; max-height: 220px; object-fit:cover; }
+  .ocr-status{ text-align:center; font-size:13px; color: var(--primary); margin-top:10px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .spinner{ width:14px;height:14px; border:2px solid var(--border); border-top-color: var(--primary); border-radius:50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .item-row{ display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+  .item-row input{ flex:1; }
+  .item-row input.price-input{ max-width:80px; }
+  .item-row .rm-btn{ background: var(--surface-2); border:none; width:32px;height:32px; border-radius:9px; color:var(--danger); flex-shrink:0; font-size:14px; }
+
+  .filters{ display:flex; gap:8px; flex-wrap:wrap; margin: 1rem 0; }
+  .chip{ padding: 7px 14px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--border); color: var(--text-soft); font-size: 13px; cursor:pointer; font-weight:600; }
+  .chip.active{ background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border-color: transparent; }
+
+  .bill-item{ background: var(--surface); border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); cursor:pointer; }
+  .bill-item-top{ display:flex; align-items:center; gap:10px; }
+  .bill-emoji{ width:36px;height:36px;border-radius:10px; background: var(--surface-2); display:flex;align-items:center;justify-content:center; font-size:17px; flex-shrink:0; }
+  .bill-info{ flex:1; min-width:0; }
+  .bill-store{ font-size:14px; font-weight:600; }
+  .bill-date{ font-size:12px; color: var(--text-muted); }
+  .bill-total{ font-size:15px; font-weight:700; color: var(--primary-dark); white-space:nowrap; }
+  .bill-diff{ font-size:11px; font-weight:700; margin-top:2px; text-align:end; }
+  .diff-up{ color: var(--danger); }
+  .diff-down{ color: #2E9E6B; }
+
+  .detail-back{ display:flex; align-items:center; gap:8px; color: var(--primary); font-weight:700; font-size:14px; margin-bottom:12px; cursor:pointer; }
+  .detail-item{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+  .detail-item:last-child{ border-bottom:none; }
+  .detail-item-name{ flex:1; font-size:13.5px; }
+  .detail-item-price{ font-size:13.5px; font-weight:700; color: var(--primary-dark); }
+  .detail-item .rm-btn{ background: var(--surface-2); border:none; width:26px;height:26px; border-radius:8px; color:var(--danger); font-size:12px; }
+
+  .chart-section{ margin-top: 1rem; }
+  .chart-title{ font-size:14px; font-weight:700; margin-bottom:10px; }
+  .empty{ text-align:center; padding: 2.4rem 1rem; color: var(--text-muted); }
+  .empty .em-icon{ font-size:36px; margin-bottom:.6rem; }
+  .addcat-row{ display:flex; gap:8px; margin-bottom: 14px; }
+  .addcat-row input{ flex:1; }
+  .install-banner{ margin-top: 1rem; background: linear-gradient(135deg, #FBF1E1, #F6E5C8); border: 1px solid #EBCB8E; border-radius: 12px; padding: 10px 12px; font-size: 13px; color: #8A6314; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .install-banner button{ background: var(--accent-dark); color:white; border:none; border-radius:8px; padding: 6px 12px; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; }
+  [dir="ltr"] .bill-diff{ text-align:start; }
+  #view-panels > div{ display:none; }
+  #view-panels > div.active{ display:block; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container topbar-inner">
+    <div class="brand">
+      <div class="brand-icon">🧾</div>
+      <h1 data-i18n="appName">فواتيري</h1>
+    </div>
+    <button class="lang-toggle" id="langBtn">EN</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" data-view="scan" data-i18n="tabScan">مسح فاتورة</button>
+    <button class="tab-btn" data-view="bills" data-i18n="tabBills">الفواتير</button>
+    <button class="tab-btn" data-view="charts" data-i18n="tabCharts">المقارنات</button>
+  </div>
+
+  <div id="view-panels">
+
+    <!-- SCAN VIEW -->
+    <div id="panel-scan" class="active">
+      <div class="card" id="scanCard">
+        <label id="scanZoneLabel" data-i18n="scanLabel">صوّر أو ارفع صورة الفاتورة</label>
+        <div class="scan-zone" id="scanZone">
+          <span class="icon">📷</span>
+          <span data-i18n="scanHint">اضغط هنا لالتقاط صورة الفاتورة</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none;" />
+        <img id="previewImg" class="preview-img" style="display:none;" />
+        <div class="ocr-status" id="ocrStatus" style="display:none;">
+          <div class="spinner"></div>
+          <span data-i18n="ocrRunning">بنقرا الفاتورة...</span>
+        </div>
+      </div>
+
+      <div class="card" id="reviewCard" style="display:none;">
+        <div class="row">
+          <div>
+            <label data-i18n="storeLabel">اسم المحل</label>
+            <input type="text" id="storeInput" data-i18n-placeholder="storePlaceholder" placeholder="اختياري" />
+          </div>
+          <div>
+            <label data-i18n="dateLabel">التاريخ</label>
+            <input type="date" id="billDateInput" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label data-i18n="catLabel">التصنيف</label>
+            <select id="billCatSelect"></select>
+          </div>
+        </div>
+        <div class="addcat-row">
+          <input id="newCat" type="text" data-i18n-placeholder="newCatPlaceholder" placeholder="اسم تصنيف جديد" />
+          <button class="btn btn-ghost" id="addCatBtn">+ <span data-i18n="addCat">تصنيف</span></button>
+        </div>
+
+        <label data-i18n="itemsLabel">المنتجات</label>
+        <div id="itemsEditor"></div>
+        <button class="btn btn-secondary" id="addItemBtn" style="margin-bottom:12px;">+ <span data-i18n="addItem">إضافة منتج</span></button>
+
+        <div class="row">
+          <div>
+            <label data-i18n="totalLabel">الإجمالي</label>
+            <input type="number" id="totalInput" step="0.01" />
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="saveBillBtn">
+          <span>💾</span> <span data-i18n="saveBillBtn">احفظ الفاتورة</span>
+        </button>
+      </div>
+
+      <div class="install-banner" id="installBanner" style="display:none;">
+        <span data-i18n="installText">ثبّت التطبيق على شاشتك الرئيسية</span>
+        <button id="installBtn" data-i18n="installBtnText">تثبيت</button>
+      </div>
+    </div>
+
+    <!-- BILLS VIEW -->
+    <div id="panel-bills">
+      <div class="filters" id="catFilters"></div>
+      <div id="billsList"></div>
+    </div>
+
+    <!-- BILL DETAIL VIEW -->
+    <div id="panel-detail">
+      <div class="detail-back" id="backToBills"><span>→</span><span data-i18n="backToBills">رجوع للفواتير</span></div>
+      <div class="card" id="detailCard"></div>
+      <div class="card">
+        <label data-i18n="addManualItem">إضافة عنصر تاني لنفس الفاتورة</label>
+        <div class="row">
+          <div><input type="text" id="manualItemName" data-i18n-placeholder="itemNamePlaceholder" placeholder="اسم المنتج" /></div>
+          <div><input type="number" id="manualItemPrice" step="0.01" data-i18n-placeholder="pricePlaceholder" placeholder="السعر" /></div>
+        </div>
+        <button class="btn btn-secondary" id="addManualItemBtn">+ <span data-i18n="addItem">إضافة منتج</span></button>
+      </div>
+    </div>
+
+    <!-- CHARTS VIEW -->
+    <div id="panel-charts">
+      <div class="card chart-section">
+        <div class="chart-title" data-i18n="totalsCompareTitle">مقارنة إجمالي الفواتير</div>
+        <div id="totalsChart"></div>
+      </div>
+      <div class="card chart-section">
+        <div class="chart-title" data-i18n="itemCompareTitle">مقارنة سعر منتج عبر الوقت</div>
+        <select id="itemPickerSelect" style="margin-bottom:12px;"></select>
+        <div id="itemChart"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
