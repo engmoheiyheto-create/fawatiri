@@ -235,14 +235,95 @@ function parseReceiptText(text){
   return { items, total: guessedTotal };
 }
 
+/*
+  Table-aware parser for column-based receipts (common in Egyptian wholesale/
+  retail printouts): القيمة | الكمية | السعر | الصنف
+  Uses word-level bounding boxes from Tesseract to group words into rows by
+  y-position, then reads each row right-to-left (by x-position, descending)
+  since Arabic tables are laid out RTL: name column first (rightmost), then
+  price, then quantity, then the line total (leftmost).
+*/
+function isNumericToken(raw){
+  const cleaned = raw.trim();
+  if(!/\d/.test(cleaned)) return false;
+  const stripped = cleaned.replace(/[^\d.,\-]/g, '');
+  return stripped.length >= cleaned.length - 1; // allow one stray symbol like % or currency mark
+}
+function numericValue(raw){
+  const m = raw.replace(/[^\d.,\-]/g,'').match(/-?\d+[.,]?\d*/);
+  if(!m) return null;
+  const n = parseFloat(m[0].replace(',', '.'));
+  return isNaN(n) ? null : n;
+}
+
+function extractTableItems(words){
+  const valid = (words || []).filter(w => w && w.text && w.text.trim().length > 0 && w.bbox);
+  if(valid.length === 0) return [];
+
+  const heights = valid.map(w => w.bbox.y1 - w.bbox.y0).filter(h => h > 0);
+  const avgHeight = heights.length ? heights.reduce((a,b)=>a+b,0)/heights.length : 20;
+  const yThreshold = Math.max(8, avgHeight * 0.6);
+
+  const sorted = valid.slice().sort((a,b)=> (a.bbox.y0+a.bbox.y1)/2 - (b.bbox.y0+b.bbox.y1)/2);
+  const rows = [];
+  let currentRow = [];
+  let rowY = null;
+  sorted.forEach(w=>{
+    const cy = (w.bbox.y0 + w.bbox.y1) / 2;
+    if(rowY === null || Math.abs(cy - rowY) <= yThreshold){
+      currentRow.push(w);
+      rowY = rowY === null ? cy : (rowY + cy) / 2;
+    } else {
+      rows.push(currentRow);
+      currentRow = [w];
+      rowY = cy;
+    }
+  });
+  if(currentRow.length) rows.push(currentRow);
+
+  const items = [];
+  rows.forEach(row=>{
+    row.sort((a,b)=> b.bbox.x0 - a.bbox.x0); // right-to-left reading order
+    const nameParts = [];
+    const numbers = [];
+    row.forEach(w=>{
+      const txt = w.text.trim();
+      if(isNumericToken(txt)){
+        const n = numericValue(txt);
+        if(n !== null) numbers.push(n);
+      } else {
+        nameParts.push(txt);
+      }
+    });
+    const name = nameParts.join(' ').trim();
+    if(/خصم|discount/i.test(name)){
+      if(items.length > 0 && numbers.length > 0){
+        items[items.length-1].price = Math.max(0, items[items.length-1].price - Math.abs(numbers[0]));
+      }
+      return;
+    }
+    if(name.length < 2 || numbers.length === 0) return;
+    // numbers are ordered [price, qty, value] per column layout (after the name);
+    // the last number is the line's total value, which is what the customer paid for that line.
+    const lineValue = numbers[numbers.length - 1];
+    if(!lineValue || lineValue <= 0 || lineValue > 100000) return;
+    items.push({ id: Date.now() + Math.random(), name, price: lineValue, qty: 1 });
+  });
+  return items;
+}
+
 async function runOCR(imageData){
   document.getElementById('ocrStatus').style.display = 'flex';
   document.getElementById('reviewCard').style.display = 'none';
   try{
     const result = await Tesseract.recognize(imageData, 'eng+ara', {});
-    const { items, total } = parseReceiptText(result.data.text || '');
+    const text = result.data.text || '';
+    const words = result.data.words || [];
+    const parsed = parseReceiptText(text);
+    let items = extractTableItems(words);
+    if(items.length === 0) items = parsed.items;
     currentItems = items.length > 0 ? items : [{ id: Date.now(), name: '', price: 0, qty: 1 }];
-    document.getElementById('totalInput').value = total !== null ? total : sumItems(currentItems).toFixed(2);
+    document.getElementById('totalInput').value = parsed.total !== null ? parsed.total : sumItems(currentItems).toFixed(2);
   }catch(err){
     currentItems = [{ id: Date.now(), name: '', price: 0, qty: 1 }];
     document.getElementById('totalInput').value = '';
