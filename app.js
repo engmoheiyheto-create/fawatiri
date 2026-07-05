@@ -6,8 +6,6 @@ const STR = {
     tabCharts: "المقارنات",
     scanLabel: "صوّر أو ارفع صورة الفاتورة",
     scanHint: "اضغط هنا لالتقاط صورة الفاتورة",
-    cameraHint: "التقط صورة",
-    galleryHint: "اختر من المعرض",
     ocrRunning: "بنقرا الفاتورة...",
     storeLabel: "اسم المحل",
     storePlaceholder: "اختياري",
@@ -48,8 +46,6 @@ const STR = {
     tabCharts: "Comparisons",
     scanLabel: "Photograph or upload the receipt",
     scanHint: "Tap here to capture the receipt photo",
-    cameraHint: "Take a photo",
-    galleryHint: "Choose from gallery",
     ocrRunning: "Reading the receipt...",
     storeLabel: "Store name",
     storePlaceholder: "Optional",
@@ -192,10 +188,8 @@ function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, m=>({'&':'
 function escapeAttr(s){ return escapeHtml(s); }
 
 /* ---------- SCAN & OCR ---------- */
-document.getElementById('cameraZone').addEventListener('click', ()=> document.getElementById('cameraInput').click());
-document.getElementById('galleryZone').addEventListener('click', ()=> document.getElementById('galleryInput').click());
-
-function handleFileSelected(e){
+document.getElementById('scanZone').addEventListener('click', ()=> document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
@@ -207,9 +201,7 @@ function handleFileSelected(e){
     runOCR(pendingImageData);
   };
   reader.readAsDataURL(file);
-}
-document.getElementById('cameraInput').addEventListener('change', handleFileSelected);
-document.getElementById('galleryInput').addEventListener('change', handleFileSelected);
+});
 
 function parsePriceFromLine(line){
   const matches = line.match(/(\d+[.,]\d{1,2}|\d{2,6})(?!\d)/g);
@@ -319,8 +311,7 @@ document.getElementById('saveBillBtn').addEventListener('click', ()=>{
   document.getElementById('totalInput').value = '';
   document.getElementById('previewImg').style.display = 'none';
   document.getElementById('reviewCard').style.display = 'none';
-  document.getElementById('cameraInput').value = '';
-  document.getElementById('galleryInput').value = '';
+  document.getElementById('fileInput').value = '';
   currentItems = [];
 
   switchView('bills');
