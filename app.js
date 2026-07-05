@@ -13,7 +13,10 @@ const STR = {
     catLabel: "التصنيف",
     newCatPlaceholder: "اسم تصنيف جديد",
     addCat: "تصنيف",
-    itemsLabel: "المنتجات (راجع وعدّل قبل الحفظ)",
+    itemsLabel: "المنتجات",
+    importLabel: "أو الصق قائمة منتجات (اسم ثم آخر رقم في السطر = السعر)",
+    importPlaceholder: "مثال: جبن فيلادلفيا 396.00",
+    importBtnText: "استورد القائمة",
     addItem: "إضافة منتج",
     totalLabel: "الإجمالي",
     saveBillBtn: "احفظ الفاتورة",
@@ -53,7 +56,10 @@ const STR = {
     catLabel: "Category",
     newCatPlaceholder: "New category name",
     addCat: "Category",
-    itemsLabel: "Items (review and edit before saving)",
+    itemsLabel: "Items",
+    importLabel: "Or paste a list of items (name then last number in the line = price)",
+    importPlaceholder: "e.g: Philadelphia cheese 396.00",
+    importBtnText: "Import list",
     addItem: "Add item",
     totalLabel: "Total",
     saveBillBtn: "Save receipt",
@@ -371,6 +377,29 @@ function renderItemsEditor(){
 document.getElementById('addItemBtn').addEventListener('click', ()=>{
   currentItems.push({ id: Date.now()+Math.random(), name: '', price: 0, qty: 1 });
   renderItemsEditor();
+});
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  const raw = document.getElementById('importText').value;
+  if(!raw.trim()) return;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const imported = [];
+  lines.forEach(line=>{
+    const numMatches = line.match(/-?\d+[.,]?\d*/g);
+    if(!numMatches || numMatches.length===0) return;
+    const priceRaw = numMatches[numMatches.length-1].replace(',', '.');
+    const price = parseFloat(priceRaw);
+    if(isNaN(price) || price <= 0) return;
+    let name = line.replace(/-?\d+[.,]?\d*/g, '').replace(/[|,:\-–—]+$/,'').trim();
+    if(name.length < 1) name = t('general');
+    imported.push({ id: Date.now()+Math.random(), name, price, qty: 1 });
+  });
+  if(imported.length === 0) return;
+  currentItems = currentItems.filter(it => it.name.trim().length > 0 || Number(it.price) > 0);
+  currentItems = currentItems.concat(imported);
+  renderItemsEditor();
+  document.getElementById('totalInput').value = sumItems(currentItems).toFixed(2);
+  document.getElementById('importText').value = '';
 });
 
 document.getElementById('saveBillBtn').addEventListener('click', ()=>{
