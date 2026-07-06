@@ -17,6 +17,7 @@ const STR = {
     importLabel: "أو الصق قائمة منتجات (اسم ثم آخر رقم في السطر = السعر)",
     importPlaceholder: "مثال: جبن فيلادلفيا 396.00",
     importBtnText: "استورد القائمة",
+    manualEntryBtn: "إدخال يدوي بدون مسح",
     addItem: "إضافة منتج",
     totalLabel: "الإجمالي",
     saveBillBtn: "احفظ الفاتورة",
@@ -60,6 +61,7 @@ const STR = {
     importLabel: "Or paste a list of items (name then last number in the line = price)",
     importPlaceholder: "e.g: Philadelphia cheese 396.00",
     importBtnText: "Import list",
+    manualEntryBtn: "Enter manually, no scan",
     addItem: "Add item",
     totalLabel: "Total",
     saveBillBtn: "Save receipt",
@@ -207,6 +209,16 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
     runOCR(pendingImageData);
   };
   reader.readAsDataURL(file);
+});
+
+document.getElementById('manualEntryBtn').addEventListener('click', ()=>{
+  currentItems = [{ id: Date.now()+Math.random(), name: '', price: 0, qty: 1 }];
+  document.getElementById('billDateInput').value = new Date().toISOString().slice(0,10);
+  document.getElementById('totalInput').value = '';
+  document.getElementById('previewImg').style.display = 'none';
+  renderCatSelect();
+  renderItemsEditor();
+  document.getElementById('reviewCard').style.display = 'block';
 });
 
 function parsePriceFromLine(line){
